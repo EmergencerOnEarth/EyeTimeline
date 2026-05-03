@@ -39,7 +39,7 @@ from typing import Tuple
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
@@ -281,26 +281,21 @@ def _forward_by_mask_ratio(
     imgs: torch.Tensor,
     mask_ratios: torch.Tensor,
     amp: bool,
+    device: torch.device,
 ) -> torch.Tensor:
-    """按 mask_ratio 分组做 forward，加权平均 loss。
-
-    同一个 batch 中 CFP 和 OCT 样本可能有不同 mask_ratio，
-    逐组 forward 保证每组用正确的掩码率。
-    """
+    """按 mask_ratio 分组做 forward，加权平均 loss。"""
     unique_ratios = mask_ratios.unique()
 
     if len(unique_ratios) == 1:
-        # 全部相同，走单次 forward（最常见情况）
-        with autocast(enabled=amp):
+        with autocast("cuda", enabled=amp):
             loss, _, _ = model(imgs, mask_ratio=unique_ratios[0].item())
         return loss
 
-    # 混合 batch：按 ratio 分组
-    total_loss = torch.tensor(0.0, device=imgs.device)
+    total_loss = torch.tensor(0.0, device=device)
     for ratio in unique_ratios:
         idx = (mask_ratios == ratio).nonzero(as_tuple=True)[0]
         sub = imgs[idx]
-        with autocast(enabled=amp):
+        with autocast("cuda", enabled=amp):
             loss, _, _ = model(sub, mask_ratio=ratio.item())
         total_loss = total_loss + loss * len(idx)
 
@@ -331,7 +326,7 @@ def train_one_epoch(
         imgs        = imgs.to(device, non_blocking=True)
         mask_ratios = mask_ratios.float().to(device, non_blocking=True)
 
-        loss = _forward_by_mask_ratio(model, imgs, mask_ratios, args.amp)
+        loss = _forward_by_mask_ratio(model, imgs, mask_ratios, args.amp, device)
         loss = loss / args.accum_steps
 
         if scaler is not None:
@@ -508,7 +503,7 @@ def main() -> None:
          {"params": no_decay, "weight_decay": 0.0}],
         lr=base_lr, betas=(0.9, 0.95),
     )
-    scaler = GradScaler() if args.amp else None
+    scaler = GradScaler("cuda") if args.amp else None
 
     # ── Resume ────────────────────────────────────────────────────────────
     start_epoch = 1
