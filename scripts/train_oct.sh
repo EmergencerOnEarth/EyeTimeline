@@ -13,10 +13,16 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 # ── 元数据 CSV 文件列表 ──────────────────────────────────────────────────
+# 注意：图像数据已复制到 /dev/shm 以消除磁盘 I/O 瓶颈。
+# 若 /dev/shm 数据丢失（重启后），将 SHM_ROOT_* 改回原始磁盘路径即可。
+SHM_ROOT_20250710_VOL="/dev/shm/processed_result_20250710_vol"
+SHM_ROOT_20250720_VOL="/dev/shm/processed_result_20250720_vol"
+SHM_ROOT_20250901_VOL="/dev/shm/processed_result_20250901_vol"
+
 CSV_FILES=(
-    "/data1/kechuang/processed_result_new/processed_result_20250710_vol/processing_results_volume_sum_clean_meta.csv"
-    "/data1/kechuang/processed_result_new/processed_result_20250720_vol/processing_results_volume_sum_clean_meta.csv"
-    "/data1/kechuang/processed_result_new/processed_result_20250901_vol/processing_results_volume_sum_clean_meta.csv"
+    "${SHM_ROOT_20250710_VOL}/processing_results_volume_sum_clean_meta.csv"
+    "${SHM_ROOT_20250720_VOL}/processing_results_volume_sum_clean_meta.csv"
+    "${SHM_ROOT_20250901_VOL}/processing_results_volume_sum_clean_meta.csv"
 )
 CSV_PATH_COL="output_subdir"
 MODALITY="oct"

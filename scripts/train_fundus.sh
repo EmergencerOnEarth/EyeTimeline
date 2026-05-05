@@ -14,10 +14,20 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
 # ── 元数据 CSV 文件列表 ──────────────────────────────────────────────────
+# 注意：CSV 文件路径保留在原始磁盘，图像目录已复制到 /dev/shm 加速 I/O。
+# CSV 中的 output_subdir 字段记录的是相对路径，脚本通过 --shm_root 参数
+# 将根目录重定向到 /dev/shm 下对应位置。
+#
+# 若 /dev/shm 中无对应目录（如重启后数据丢失），可将 SHM_ROOT 改回原始路径：
+#   SHM_ROOT_20250710="/data1/kechuang/processed_result_new/processed_result_20250710"
+SHM_ROOT_20250710="/dev/shm/processed_result_20250710"
+SHM_ROOT_20250720="/dev/shm/processed_result_20250720"
+SHM_ROOT_20250901="/dev/shm/processed_result_20250901"
+
 CSV_FILES=(
-    "/data1/kechuang/processed_result_new/processed_result_20250710/processed_result_corrected_clean_corrected_meta.csv"
-    "/data1/kechuang/processed_result_new/processed_result_20250720/processed_result_clean_meta.csv"
-    "/data1/kechuang/processed_result_new/processed_result_20250901/processing_results_sum_clean_meta.csv"
+    "${SHM_ROOT_20250710}/processed_result_corrected_clean_corrected_meta.csv"
+    "${SHM_ROOT_20250720}/processed_result_clean_meta.csv"
+    "${SHM_ROOT_20250901}/processing_results_sum_clean_meta.csv"
 )
 CSV_PATH_COL="output_subdir"
 MODALITY="cfp"

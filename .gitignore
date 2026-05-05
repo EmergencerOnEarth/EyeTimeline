@@ -32,6 +32,14 @@ __pycache__/
 *.swp
 *.swo
 
+# ── 推理输出（本地测试结果，不上传）────────────────────
+infer_output/
+
+# ── Git / GitHub Token 配置（包含敏感信息，绝不上传）───
+.env
+.env.local
+.github_token
+
 # ── 系统文件 ────────────────────────────────────────────
 .DS_Store
 Thumbs.db
