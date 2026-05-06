@@ -29,11 +29,11 @@ MODALITY="oct"
 
 # ── 训练超参 ──────────────────────────────────────────────────────────────
 CHECKPOINT_INIT="weights/mae_vit_large_imagenet.bin"
-OUTPUT_DIR="checkpoints/oct_v1"
+OUTPUT_DIR="checkpoints/oct_v2_800ep"
 GPUS=4
 BATCH_SIZE=768
-EPOCHS=200
-WARMUP_EPOCHS=20
+EPOCHS=800
+WARMUP_EPOCHS=40         # ~5% of 800，与 MAE 原论文比例一致
 MASK_RATIO_CFP=0.75
 MASK_RATIO_OCT=0.85
 SAVE_EVERY=10
