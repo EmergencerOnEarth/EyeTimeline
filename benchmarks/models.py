@@ -11,7 +11,7 @@ from models_mae import mae_vit_base_patch16, mae_vit_large_patch16
 
 def _extract_state_dict(payload: Any) -> dict[str, torch.Tensor]:
     if isinstance(payload, dict):
-        for key in ("model", "state_dict", "teacher", "student"):
+        for key in ("model", "state_dict", "model_state_dict", "teacher", "student"):
             if key in payload and isinstance(payload[key], dict):
                 return payload[key]
     if isinstance(payload, dict):
@@ -143,16 +143,23 @@ class EyeCLIPClassifier(nn.Module):
                 "EyeCLIP baseline requires openai/CLIP. Install benchmarks/requirements-benchmark.txt"
             ) from exc
 
-        model, _ = clip.load(clip_model_type, device="cpu", jit=False)
         if checkpoint:
             payload = torch.load(checkpoint, map_location="cpu")
             state = _extract_state_dict(payload)
             state = _strip_prefix(state, "module.")
-            msg = model.load_state_dict(state, strict=False)
-            print(
-                f"[EyeCLIP] Loaded {checkpoint} | "
-                f"missing={len(msg.missing_keys)} unexpected={len(msg.unexpected_keys)}"
-            )
+            try:
+                from clip.model import build_model as build_clip_model  # type: ignore
+                model = build_clip_model(state).float()
+                print(f"[EyeCLIP] Built CLIP model directly from {checkpoint}")
+            except Exception:
+                model, _ = clip.load(clip_model_type, device="cpu", jit=False)
+                msg = model.load_state_dict(state, strict=False)
+                print(
+                    f"[EyeCLIP] Loaded {checkpoint} | "
+                    f"missing={len(msg.missing_keys)} unexpected={len(msg.unexpected_keys)}"
+                )
+        else:
+            model, _ = clip.load(clip_model_type, device="cpu", jit=False)
         self.clip_model = model.float()
         embed_dim = int(model.visual.output_dim)
         self.head = nn.Sequential(nn.Dropout(dropout), nn.Linear(embed_dim, num_classes))
