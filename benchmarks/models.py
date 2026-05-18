@@ -147,17 +147,13 @@ class EyeCLIPClassifier(nn.Module):
             payload = torch.load(checkpoint, map_location="cpu")
             state = _extract_state_dict(payload)
             state = _strip_prefix(state, "module.")
+            state = {k: v for k, v in state.items() if not k.startswith("visual.decoder.")}
             try:
                 from clip.model import build_model as build_clip_model  # type: ignore
                 model = build_clip_model(state).float()
                 print(f"[EyeCLIP] Built CLIP model directly from {checkpoint}")
-            except Exception:
-                model, _ = clip.load(clip_model_type, device="cpu", jit=False)
-                msg = model.load_state_dict(state, strict=False)
-                print(
-                    f"[EyeCLIP] Loaded {checkpoint} | "
-                    f"missing={len(msg.missing_keys)} unexpected={len(msg.unexpected_keys)}"
-                )
+            except Exception as exc:
+                raise RuntimeError(f"Failed to build EyeCLIP model from {checkpoint}") from exc
         else:
             model, _ = clip.load(clip_model_type, device="cpu", jit=False)
         self.clip_model = model.float()

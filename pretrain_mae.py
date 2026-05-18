@@ -39,7 +39,22 @@ from typing import Tuple
 import torch
 import torch.distributed as dist
 import torch.nn as nn
-from torch.amp import GradScaler, autocast
+try:
+    from torch.amp import GradScaler, autocast
+
+    def make_grad_scaler() -> GradScaler:
+        return GradScaler("cuda")
+
+    def cuda_autocast(enabled: bool):
+        return autocast("cuda", enabled=enabled)
+except ImportError:
+    from torch.cuda.amp import GradScaler, autocast
+
+    def make_grad_scaler() -> GradScaler:
+        return GradScaler()
+
+    def cuda_autocast(enabled: bool):
+        return autocast(enabled=enabled)
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
@@ -287,7 +302,7 @@ def _forward_by_mask_ratio(
     unique_ratios = mask_ratios.unique()
 
     if len(unique_ratios) == 1:
-        with autocast("cuda", enabled=amp):
+        with cuda_autocast(enabled=amp):
             loss, _, _ = model(imgs, mask_ratio=unique_ratios[0].item())
         return loss
 
@@ -295,7 +310,7 @@ def _forward_by_mask_ratio(
     for ratio in unique_ratios:
         idx = (mask_ratios == ratio).nonzero(as_tuple=True)[0]
         sub = imgs[idx]
-        with autocast("cuda", enabled=amp):
+        with cuda_autocast(enabled=amp):
             loss, _, _ = model(sub, mask_ratio=ratio.item())
         total_loss = total_loss + loss * len(idx)
 
@@ -503,7 +518,7 @@ def main() -> None:
          {"params": no_decay, "weight_decay": 0.0}],
         lr=base_lr, betas=(0.9, 0.95),
     )
-    scaler = GradScaler("cuda") if args.amp else None
+    scaler = make_grad_scaler() if args.amp else None
 
     # ── Resume ────────────────────────────────────────────────────────────
     start_epoch = 1

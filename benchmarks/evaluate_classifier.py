@@ -85,17 +85,26 @@ def main() -> None:
     )
 
     device = torch.device(args.device if torch.cuda.is_available() or args.device == "cpu" else "cpu")
+    checkpoint_mode = payload.get("checkpoint_mode", "full" if "model" in payload else "head_only")
+    init_checkpoint = (
+        train_args.checkpoint
+        if checkpoint_mode == "head_only" or train_args.backbone == "eyeclip"
+        else None
+    )
     model = build_model(
         train_args.backbone,
         num_classes=len(class_to_idx),
-        checkpoint=None,
+        checkpoint=init_checkpoint,
         img_size=train_args.img_size,
         mae_variant=getattr(train_args, "mae_variant", "large"),
         dropout=train_args.dropout,
         pool=train_args.pool,
         clip_model_type=train_args.clip_model_type,
     ).to(device)
-    model.load_state_dict(payload["model"], strict=True)
+    if checkpoint_mode == "head_only":
+        model.head.load_state_dict(payload["head"], strict=True)
+    else:
+        model.load_state_dict(payload["model"], strict=True)
 
     y_true, logits, paths = predict(model, loader, device)
     metrics = compute_metrics(y_true, logits)

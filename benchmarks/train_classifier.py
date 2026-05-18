@@ -51,6 +51,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--weight-decay", type=float, default=0.05)
     p.add_argument("--num-workers", type=int, default=8)
     p.add_argument("--output-dir", required=True)
+    p.add_argument(
+        "--save-head-only",
+        action="store_true",
+        help="Save only the classifier head. Use this for frozen-encoder linear probes to avoid multi-GB checkpoints.",
+    )
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--device", default="cuda")
     return p.parse_args()
@@ -112,13 +117,21 @@ def save_checkpoint(
     metrics: dict,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save({
-        "model": model.state_dict(),
+    payload = {
         "args": vars(args),
         "class_to_idx": class_to_idx,
         "epoch": epoch,
         "metrics": metrics,
-    }, path)
+    }
+    if args.save_head_only:
+        if not hasattr(model, "head"):
+            raise TypeError(f"Cannot save head-only checkpoint for model type: {type(model)}")
+        payload["checkpoint_mode"] = "head_only"
+        payload["head"] = model.head.state_dict()
+    else:
+        payload["checkpoint_mode"] = "full"
+        payload["model"] = model.state_dict()
+    torch.save(payload, path)
 
 
 def write_predictions(
