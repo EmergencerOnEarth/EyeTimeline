@@ -17,6 +17,12 @@ weights/*.safetensors
 # ── 训练输出 ────────────────────────────────────────────
 checkpoints/
 
+# ── Benchmark 数据、外部仓库、权重与结果（不上传）────────
+benchmark_data/
+benchmark_outputs/
+baseline_weights/
+external_repos/
+
 # ── Python 缓存 ─────────────────────────────────────────
 __pycache__/
 *.pyc
