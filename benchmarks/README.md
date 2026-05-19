@@ -125,3 +125,53 @@ Recommended initial matrix:
 EyeCLIP is included as an image-encoder baseline for linear probing and
 fine-tuning. Zero-shot, retrieval, and VQA should wait until EyeTimeline has
 image-text alignment and a text encoder.
+
+## Production Matrix Runner
+
+After placing datasets and weights under `/data1/kechuang/EyeTimelineAssets`,
+run the full supervised linear-probe benchmark matrix in the background:
+
+```bash
+cd /data1/kechuang/EyeTimeline
+ASSET_ROOT=/data1/kechuang/EyeTimelineAssets \
+BENCHMARK_GPUS=0,1,2,3 \
+DETACH=1 \
+bash scripts/run_benchmark_matrix.sh
+```
+
+Default matrix:
+
+- datasets: `aptos2019 idrid papila glaucoma_fundus octid`
+- models: `ours retfound eyeclip`
+- mode: `linear`
+
+Useful overrides:
+
+```bash
+MODELS="ours retfound eyeclip imagenet_mae random_mae"
+MODES="linear full"
+EPOCHS_LINEAR=50
+EPOCHS_FULL=50
+BATCH_SIZE_LINEAR=64
+BATCH_SIZE_FULL=16
+FORCE=1
+```
+
+Monitor a background run:
+
+```bash
+bash scripts/benchmark_status.sh
+tail -f /data1/kechuang/EyeTimelineAssets/benchmark_outputs/run_logs/latest.log
+```
+
+Each job writes its own log under
+`benchmark_outputs/job_logs/<mode>/<modality>/<dataset>/<model>.log`.
+The runner writes progress to the latest run directory:
+
+```text
+benchmark_outputs/latest_run.txt
+benchmark_outputs/runs/<timestamp>/status.json
+benchmark_outputs/runs/<timestamp>/progress.jsonl
+benchmark_outputs/summary.csv
+benchmark_outputs/summary.md
+```
